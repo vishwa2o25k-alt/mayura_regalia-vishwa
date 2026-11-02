@@ -1,38 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { settingsApi } from '../services/adminApi';
 
 const MAX_SLIDES = 6;
 const MAX_IMAGES = 4;
 const MAX_PAYLOAD = 9 * 1024 * 1024; // server accepts 10 MB per request
 
-// An image is kept when it is an uploaded photo (data: URI), a web link, or a site path such as
-// /CoverImage1.png (those files live in the website's public folder and display fine). Paths that
-// do not actually load - for example an old /products/JewelsSet.jpeg - are dropped after a check.
-const isEmbeddableImage = (src) =>
-  typeof src === 'string' && (src.startsWith('data:') || /^https?:\/\//i.test(src) || src.startsWith('/'));
-
-const imageLoads = (src) => new Promise((resolve) => {
-  if (src.startsWith('data:')) return resolve(true);
-  const img = new Image();
-  img.onload = () => resolve(true);
-  img.onerror = () => resolve(false);
-  img.src = src;
-});
-
 const parseSlides = (value) => {
   try {
     const parsed = JSON.parse(value);
-    if (Array.isArray(parsed)) {
-      let hadLegacyPaths = false;
-      const cleaned = parsed.map((slide) => {
-        const validImages = (slide.images || []).filter(isEmbeddableImage);
-        if (validImages.length !== (slide.images || []).length) hadLegacyPaths = true;
-        return { ...slide, images: validImages };
-      });
-      return { slides: cleaned, hadLegacyPaths };
-    }
+    if (Array.isArray(parsed)) return parsed;
   } catch (e) { /* ignore */ }
-  return { slides: [], hadLegacyPaths: false };
+  return [];
 };
 
 // Shrinks an uploaded photo so several of them fit comfortably in the database.
@@ -72,32 +50,11 @@ const fieldStyle = { width: '100%', padding: '0.5rem', marginTop: '0.25rem', bor
 const miniBtn = { border: '1px solid #ccc', background: '#fff', borderRadius: 4, padding: '2px 8px', cursor: 'pointer', fontSize: '0.8rem' };
 
 const HeroSlidesEditor = ({ value, onSaved }) => {
-  const [slides, setSlides] = useState(() => parseSlides(value).slides);
-  const [hadLegacy, setHadLegacy] = useState(() => parseSlides(value).hadLegacyPaths);
+  const [slides, setSlides] = useState(() => parseSlides(value));
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      let removed = false;
-      const checked = await Promise.all(slides.map(async (slide) => {
-        const keep = [];
-        for (const src of slide.images || []) {
-          if (await imageLoads(src)) keep.push(src); else removed = true;
-        }
-        return { ...slide, images: keep };
-      }));
-      if (!cancelled && removed) {
-        setSlides(checked);
-        setHadLegacy(true);
-      }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const patch = (index, changes) =>
     setSlides((cur) => cur.map((s, i) => (i === index ? { ...s, ...changes } : s)));
@@ -125,23 +82,6 @@ const HeroSlidesEditor = ({ value, onSaved }) => {
       setError(err.message);
     } finally {
       setBusy(false);
-    }
-  };
-
-  const resetToDefaults = async () => {
-    if (!window.confirm('Reset hero slides to built-in defaults? This will overwrite the current slides saved in the database.')) return;
-    setError('');
-    setMessage('');
-    setSaving(true);
-    try {
-      const result = await settingsApi.resetHero();
-      setMessage('Hero slides reset to defaults. The page will reload to show them.');
-      setTimeout(() => window.location.reload(), 1500);
-      if (onSaved) onSaved(result.settings);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -181,14 +121,6 @@ const HeroSlidesEditor = ({ value, onSaved }) => {
         Upload your own photos or remove any slide you do not want. Up to {MAX_SLIDES} slides.
       </p>
 
-      {hadLegacy && (
-        <div className="admin-error" style={{ background: '#fff8e1', borderColor: '#f9a825', color: '#5d4037' }}>
-          ⚠️ Some images stored in the database were old file-path references (e.g.{' '}
-          <code>JewelsSet.jpeg</code>) that do not exist on the server. They have been
-          removed from the preview. Please <strong>re-upload replacement photos</strong> for
-          each slide below and click <strong>Save hero slides</strong>.
-        </div>
-      )}
       {message && <div className="admin-success">{message}</div>}
       {error && <div className="admin-error">{error}</div>}
 
@@ -240,19 +172,9 @@ const HeroSlidesEditor = ({ value, onSaved }) => {
         </div>
       ))}
 
-      <div className="modal-actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div className="modal-actions">
         <button type="button" className="save-btn" disabled={saving || busy} onClick={save} style={{ background: '#b8860b', color: '#fff' }}>
           {saving ? 'Saving...' : 'Save hero slides'}
-        </button>
-        <button
-          type="button"
-          className="save-btn ghost"
-          disabled={saving || busy}
-          onClick={resetToDefaults}
-          style={{ borderColor: '#b3261e', color: '#b3261e' }}
-          title="Restore the built-in default slides, clearing any stale image paths"
-        >
-          Reset to defaults
         </button>
       </div>
     </div>

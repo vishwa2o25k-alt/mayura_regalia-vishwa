@@ -8,7 +8,6 @@ const router = express.Router();
 // GET /api/payments/config for the handful of payment flags it needs.
 // Public: only the hero slides (no secrets) so the storefront can render them.
 router.get('/hero', controller.getHero);
-router.post('/hero/reset', requireAdmin, controller.resetHeroSlides);
 router.get('/gold-prices', controller.getGoldPrices);
 router.get('/', requireAdmin, controller.getSettings);
 router.put('/', requireAdmin, controller.updateSettings);

@@ -71,7 +71,6 @@ const CategoryCard = ({ name, image, video, icon = '✦', link, focus = 'center'
           <img
             src={image}
             alt={name}
-            style={{ objectPosition: focus }}
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}

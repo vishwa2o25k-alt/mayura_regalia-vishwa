@@ -63,28 +63,33 @@ const Shop = () => {
   useEffect(() => {
     let sorted = [...products];
 
-    // Client-side exact filtering (used when the API is offline and mock data is shown).
-    // If an exact filter would leave nothing, keep the server's list: the server falls back to
-    // the same match that search uses, so menu links and search always show the same items.
-    if (selectedCategory && selectedCategory !== 'all' && !/^gold /i.test(selectedCategory.trim())) {
+    // Client-side category filtering fallback if multiple categories were returned
+    if (selectedCategory && selectedCategory !== 'all') {
       const catLower = selectedCategory.toLowerCase().trim();
-      const byCategory = sorted.filter((p) => {
+      sorted = sorted.filter((p) => {
         if (!p.category) return false;
         const pCat = p.category.toLowerCase().trim();
-        if (catLower === 'jewels') return pCat === 'jewels';
+        if (catLower === 'jewels') {
+          return (
+            pCat === 'jewels'
+          );
+        }
         if (catLower === 'fashion jewels') {
           return ['necklaces', 'earrings', 'bangles', 'rings', 'bridal jewellery', 'bracelets'].includes(pCat);
         }
-        if (catLower === 'silver jewellery') return ['silver', 'german silver'].includes(pCat);
+        if (catLower === 'silver jewellery') {
+          return ['silver', 'german silver'].includes(pCat);
+        }
         return pCat === catLower;
       });
-      if (byCategory.length) sorted = byCategory;
     }
 
     if (queryMaterial) {
       const matLower = queryMaterial.toLowerCase().trim();
-      const byMaterial = sorted.filter((p) => p.material && p.material.toLowerCase().trim() === matLower);
-      if (byMaterial.length) sorted = byMaterial;
+      sorted = sorted.filter(
+        (p) =>
+          p.material && p.material.toLowerCase().trim() === matLower
+      );
     }
 
     switch (selectedSort) {

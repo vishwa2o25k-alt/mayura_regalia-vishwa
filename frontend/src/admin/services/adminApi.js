@@ -86,5 +86,4 @@ export const dashboardApi = {
 export const settingsApi = {
   get: () => apiRequest('/settings', { headers: authHeaders() }),
   update: (data) => apiRequest('/settings', { method: 'PUT', headers: authHeaders(), body: JSON.stringify(data) }),
-  resetHero: () => apiRequest('/settings/hero/reset', { method: 'POST', headers: authHeaders() }),
 };
