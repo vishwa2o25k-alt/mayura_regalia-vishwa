@@ -33,17 +33,17 @@ if (process.env.DB_SSL === 'true') {
 }
 
 const baseConfig = {
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+  port: Number(process.env.DB_PORT || process.env.MYSQLPORT || 3306),
+  user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+  password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
   ...(sslConfig ? { ssl: sslConfig } : {}),
 };
 
 let pool;
 
 async function initializeDatabase() {
-  const databaseName = process.env.DB_NAME || 'defaultdb';
+  const databaseName = process.env.DB_NAME || process.env.MYSQLDATABASE || 'defaultdb';
 
   const connection = await mysql.createConnection({
     ...baseConfig,
