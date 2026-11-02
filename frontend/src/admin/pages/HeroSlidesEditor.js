@@ -16,22 +16,31 @@ const parseSlides = (value) => {
 // Shrinks an uploaded photo so several of them fit comfortably in the database.
 function fileToCompressedDataUrl(file, maxSide = 1200, quality = 0.8) {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL('image/jpeg', quality));
+    if (!file) return reject(new Error('No file selected'));
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Could not read "${file.name}". The file may be in use or corrupted.`));
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const scale = Math.min(1, maxSide / Math.max(img.width || 1, img.height || 1));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round((img.width || 800) * scale);
+          canvas.height = Math.round((img.height || 600) * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        } catch (e) {
+          resolve(dataUrl);
+        }
+      };
+      img.onerror = () => {
+        resolve(dataUrl);
+      };
+      img.src = dataUrl;
     };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error(`Could not read "${file.name}" as an image`));
-    };
-    img.src = url;
+    reader.readAsDataURL(file);
   });
 }
 
